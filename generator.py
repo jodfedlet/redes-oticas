@@ -4,7 +4,7 @@ import csv
 import json
 import itertools
 
-REAL_TOPOLOGIES_DIR = 'TopologiasRedesReais/nodes_links'
+REAL_TOPOLOGIES_DIR = 'TopologiasRedesReais'
 TOPOLOGIES_DIR = 'Topologias'
 MAX_ITERATION = 2
 
