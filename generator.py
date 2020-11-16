@@ -6,7 +6,7 @@ import itertools
 
 REAL_TOPOLOGIES_DIR = 'TopologiasRedesReais'
 TOPOLOGIES_DIR = 'Topologias'
-MAX_ITERATION = 1
+MAX_ITERATION = 2
 
 
 def valid_link(source, target, existing_links):
