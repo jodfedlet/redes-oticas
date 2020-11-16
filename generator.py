@@ -6,7 +6,7 @@ import itertools
 
 REAL_TOPOLOGIES_DIR = 'TopologiasRedesReais'
 TOPOLOGIES_DIR = 'Topologias'
-MAX_ITERATION = 2
+MAX_ITERATION = 1
 
 
 def valid_link(source, target, existing_links):
@@ -70,6 +70,7 @@ def generate_topologies_from_csv_files():
 
 if __name__ == '__main__':
     if os.path.exists(TOPOLOGIES_DIR):
+        print('Removing existing folder...')
         shutil.rmtree(TOPOLOGIES_DIR)
 
     os.mkdir(TOPOLOGIES_DIR)
