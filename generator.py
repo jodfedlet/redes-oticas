@@ -3,69 +3,65 @@ import shutil
 import csv
 import json
 import itertools
+import random
+
 
 REAL_TOPOLOGIES_DIR = 'TopologiasRedesReais'
 TOPOLOGIES_DIR = 'Topologias'
-MAX_ITERATION = 2
 
 
-def valid_link(source, target, existing_links):
-    return existing_links.isdisjoint(set(itertools.permutations((source, target))))
+def valid_link(link, existing_links):
+    source, target = map(lambda l: l['Id'], link)
+    existing_links_set = {(l['From'], l['To']) for l in existing_links}
+    return existing_links_set.isdisjoint(set(itertools.permutations((source, target))))
 
 
-def get_json_file_name(original_file_name, index, counter):
-    return (
-        f'{TOPOLOGIES_DIR}/'
-        f'{original_file_name.replace(".csv", f"_{index}_{counter}.json")}'
-    )
-
-
-def save_json_file(content, file_name, index='', counter=''):
-    with open(get_json_file_name(file_name, index, counter), 'w') as f:
+def save_json_file(content, file_name):
+    with open(f'{TOPOLOGIES_DIR}/{file_name}.json', 'w') as f:
         json.dump(content, f)
 
 
-def generate_topologies_with_one_more_link(node_list, link_list):
-    existing_links = set([(link['From'], link['To'])
-                          for link in link_list])
-    node_name_list = [node['Id'] for node in node_list]
-    for source, target in itertools.combinations(node_name_list, 2):
-        if valid_link(source, target, existing_links):
-            yield link_list + [{'From': source, 'To': target}]
-
-
-def get_nodes_and_links_from_csv_file(nodes_file_name):
-    link_file_name = nodes_file_name.replace('nodes', 'links')
-    with open(f'{REAL_TOPOLOGIES_DIR}/{nodes_file_name}') as nodes_file, \
-            open(f'{REAL_TOPOLOGIES_DIR}/{link_file_name}') as links_file:
+def get_nodes_and_links_from_csv_file(nodes_file_name, link_file_name):
+    with open(f'{REAL_TOPOLOGIES_DIR}/{nodes_file_name}.csv') as nodes_file, \
+            open(f'{REAL_TOPOLOGIES_DIR}/{link_file_name}.csv') as links_file:
         node_list = list(csv.DictReader(nodes_file))
         link_list = [{'From': link['From'], 'To': link['To']}
                      for link in csv.DictReader(links_file)]
         return node_list, link_list
 
 
-def generate_topology_from(node_list, link_list, links_file_name, index, counters):
-    if index > MAX_ITERATION:
-        return
+def add_random_link_to_link_list(node_list, link_list):
+    possible_links = list(itertools.combinations(node_list, 2))
+    random.shuffle(possible_links)
+    if len(link_list) < len(possible_links):
+        for link in possible_links:
+            if valid_link(link, link_list):
+                link_list.append({'From': link[0]['Id'], 'To': link[1]['Id']})
+                break
+        return True
+    return False
 
-    counters.setdefault(index, 0)
-    for new_link_list in generate_topologies_with_one_more_link(node_list, link_list):
-        save_json_file(new_link_list, links_file_name, index, counters[index])
-        counters[index] += 1
+
+def generate_topology_from(node_list, link_list, links_file_name, number_of_links_added):
+    graph_avg_degree = (len(link_list) * 2) / len(node_list)
+    if graph_avg_degree < 5 and add_random_link_to_link_list(node_list, link_list):
+        save_json_file(
+            link_list, f'{links_file_name}_{number_of_links_added + 1}')
         generate_topology_from(node_list, link_list,
-                               links_file_name, index + 1, counters)
+                               links_file_name, number_of_links_added + 1)
 
 
 def generate_topologies_from_csv_files():
-    for file_name in os.listdir(REAL_TOPOLOGIES_DIR):
-        if file_name.endswith('nodes.csv'):
-            print(file_name.replace('_nodes.csv', ''))
-            links_file_name = file_name.replace('nodes', 'links')
-            node_list, link_list = get_nodes_and_links_from_csv_file(file_name)
-            generate_topology_from(node_list, link_list,
-                                   links_file_name, 1, {})
-            save_json_file(node_list, file_name)
-            save_json_file(link_list, links_file_name)
+    for nodes_file_name in filter(lambda file_name: file_name.endswith('nodes.csv'), os.listdir(REAL_TOPOLOGIES_DIR)):
+        print(nodes_file_name.replace('_nodes.csv', ''))
+        nodes_file_name = nodes_file_name.replace('.csv', '')
+        links_file_name = nodes_file_name.replace('nodes', 'links')
+        node_list, link_list = get_nodes_and_links_from_csv_file(
+            nodes_file_name, links_file_name)
+        save_json_file(node_list, nodes_file_name)
+        save_json_file(link_list, links_file_name)
+        generate_topology_from(node_list, link_list,
+                               links_file_name, 0)
 
 
 if __name__ == '__main__':
