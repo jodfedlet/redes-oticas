@@ -59,7 +59,7 @@ def generate_topologies_from_csv_files():
         node_list, link_list = get_nodes_and_links_from_csv_file(
             nodes_file_name, links_file_name)
         save_json_file(node_list, nodes_file_name)
-        save_json_file(link_list, links_file_name)
+        save_json_file(link_list, links_file_name + '_0')
         generate_topology_from(node_list, link_list,
                                links_file_name, 0)
 
