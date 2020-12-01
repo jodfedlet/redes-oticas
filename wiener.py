@@ -28,25 +28,4 @@ with open('./wienerIndexes.json', 'w') as wienerIndexes:
 
                 wienerIndexesDict[fileName] = wienerIndex
 
-    json.dump(wienerIndexesDict, wienerIndexes)
-
-# G.add_nodes_from(
-#     elem['From']
-#     for elem in JSONLinks
-# )
-
-# G.add_edges_from(
-#     (elem['From'], elem['To'])
-#     for elem in JSONLinks
-# )
-
-# print(G)
-
-# wienerIndex = nx.wiener_index(G)
-
-# # nx.draw(
-# #     G,
-# #     with_labels=True
-# # )
-
-# print(wienerIndex)
+    json.dump(wienerIndexesDict, wienerIndexes, sort_keys=True)

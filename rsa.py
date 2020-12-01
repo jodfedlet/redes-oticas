@@ -1,9 +1,12 @@
 import os
 import json
 import itertools
+from datetime import date, datetime
 from functools import reduce
 
 import networkx as nx
+from networkx.algorithms.connectivity import build_auxiliary_edge_connectivity
+from networkx.algorithms.flow import build_residual_network
 
 
 def get_link_index(u, v):
@@ -36,16 +39,16 @@ def node_list_to_link_list(node_list):
 
 def rsa(source, target, index):
     shortest_path_as_link_list = node_list_to_link_list(
-        smallest_paths[source][target][index]
+        shortest_paths[source][target][index]
     )
     spectrum_list = [
-        spectrumDict[get_link_index(u, v)] for u, v in shortest_path_as_link_list
+        spectrum_dict[get_link_index(u, v)] for u, v in shortest_path_as_link_list
     ]
     ff = first_fit(spectrum_list)
     if ff == -1:
         return False
     for u, v in shortest_path_as_link_list:
-        spectrumDict[get_link_index(u, v)][ff] = ff + 1
+        spectrum_dict[get_link_index(u, v)][ff] = ff + 1
 
     return True
 
@@ -56,39 +59,60 @@ for filename in filter(
 ):
     with open(f"Topologias/{filename}", "r") as nodes_file:
         index = 0
-        nodes = list(map(lambda node: node['Id'], json.load(nodes_file)))
+        nodes = list(map(lambda node: node["Id"], json.load(nodes_file)))
         demands = list(itertools.combinations(nodes, 2))
         while True:
             try:
                 links_file_name = filename.replace("nodes", "links_" + str(index))
                 with open(f"Topologias/{links_file_name}") as links_file:
                     print(links_file_name)
-                    links = list(map(lambda link: (link['From'], link['To']), json.load(links_file)))
+                    links = list(
+                        map(
+                            lambda link: (link["From"], link["To"]),
+                            json.load(links_file),
+                        )
+                    )
                     graph = nx.Graph()
                     graph.add_nodes_from(nodes)
                     graph.add_edges_from(links)
 
-                    spectrumDict = {
+                    spectrum_dict = {
                         get_link_index(u, v): [0] * len(nodes) for u, v in links
                     }
-                    smallest_paths = {}
+                    shortest_paths = {}
+
+                    before = datetime.now()
+                    H = build_auxiliary_edge_connectivity(graph)
+                    R = build_residual_network(H, "capacity")
+
                     for u in nodes:
-                        smallest_paths[u] = {
-                            v: sorted(nx.edge_disjoint_paths(graph, u, v), key=len)[:2]
+                        shortest_paths[u] = {
+                            v: sorted(nx.edge_disjoint_paths(graph, u, v, auxiliary=H, residual=R), key=len)[:2]
                             for v in nodes
                             if u != v
                         }
+                    after = datetime.now()
+                    print('Shortest paths:', after - before)
 
-                    def get_block_rate():
-                        for demand in demands:
-                            yield (rsa(*demand, 0) and rsa(*demand, 1))
+                    def get_number_of_blocks():
+                        return sum(
+                            [
+                                1 if not (rsa(*demand, 0) and rsa(*demand, 1)) else 0
+                                for demand in demands
+                            ]
+                        )
 
-                    block_rate_dict[links_file_name] = len(
-                        [i for i in get_block_rate() if i]
-                    ) / len(demands)
+
+                    before = datetime.now()
+                    block_rate_dict[links_file_name] = get_number_of_blocks() / len(
+                        demands
+                    )
+                    after = datetime.now()
+
+                    print('Block rate:', after - before)
+
                     index += 1
             except Exception as error:
-                print(error)
                 break
 
 json.dump(block_rate_dict, open("block_rates.json", "w"))
