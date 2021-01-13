@@ -6,26 +6,28 @@ from networkx.readwrite import json_graph
 
 path_to_json = './Topologias'
 
-json_files = [pos_json for pos_json in os.listdir(path_to_json) if pos_json.endswith('.json') and not pos_json.endswith('nodes.json')]
+json_files = [pos_json for pos_json in os.listdir(path_to_json) if pos_json.endswith(
+    '.json') and not pos_json.endswith('nodes.json')]
 
 with open('./wienerIndexes.json', 'w') as wienerIndexes:
 
     wienerIndexesDict = {}
 
     for fileName in json_files:
-            with open('./Topologias/' + fileName, 'r') as json_file:
+        print(fileName)
+        with open('./Topologias/' + fileName, 'r') as json_file:
 
-                JSONLinks = json.load(json_file)
+            JSONLinks = json.load(json_file)
 
-                G = nx.Graph()
+            G = nx.Graph()
 
-                G.add_weighted_edges_from(
-                    (elem['From'], elem['To'], 1)
-                    for elem in JSONLinks
-                )
+            G.add_weighted_edges_from(
+                (elem['From'], elem['To'], 1)
+                for elem in JSONLinks
+            )
 
-                wienerIndex = nx.wiener_index(G)
+            wienerIndex = nx.wiener_index(G)
 
-                wienerIndexesDict[fileName] = wienerIndex
+            wienerIndexesDict[fileName] = wienerIndex
 
     json.dump(wienerIndexesDict, wienerIndexes, sort_keys=True)
